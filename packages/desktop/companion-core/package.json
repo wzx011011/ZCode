@@ -1,0 +1,6 @@
+{
+  "name": "wzxclaw-companion-core",
+  "private": true,
+  "description": "wzxClaw companion core (CommonJS 原样拷贝，勿改逻辑；见 README.md)",
+  "type": "commonjs"
+}

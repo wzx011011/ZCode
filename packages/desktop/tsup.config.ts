@@ -188,6 +188,8 @@ export default defineConfig([
       "preload/index": "src/preload/index.ts",
       "preload/resourceManager": "src/preload/resourceManager.ts",
       "preload/cuaPermissionPanel": "src/preload/cuaPermissionPanel.ts",
+      // wzxClaw 伴侣 overlay（配对二维码窗 / 宠物窗）共用最小 preload
+      "preload/wzxCompanionOverlay": "src/preload/wzxCompanionOverlay.ts",
     },
     outDir: "out",
     format: "cjs",

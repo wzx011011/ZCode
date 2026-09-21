@@ -50,6 +50,8 @@ export const desktopMenuMessageIds = {
   dockShowCurrentWindow: "dock.menu.showCurrentWindow",
   trayTooltip: "tray.tooltip",
   trayOpenZCode: "tray.menu.openZCode",
+  trayWzxPairing: "tray.menu.wzxPairing",
+  trayWzxPet: "tray.menu.wzxPet",
   trayQuit: "tray.menu.quit",
 } as const;
 
@@ -109,6 +111,8 @@ export const desktopMenuMessages: Record<Locale, DesktopMenuLocaleMessages> = {
     "dock.menu.showCurrentWindow": "显示当前窗口",
     "tray.tooltip": "ZCode",
     "tray.menu.openZCode": "打开 ZCode",
+    "tray.menu.wzxPairing": "wzxClaw 手机配对",
+    "tray.menu.wzxPet": "wzxClaw 桌面宠物",
     "tray.menu.quit": "退出",
   },
   "en-US": {
@@ -161,6 +165,8 @@ export const desktopMenuMessages: Record<Locale, DesktopMenuLocaleMessages> = {
     "dock.menu.showCurrentWindow": "Show current window",
     "tray.tooltip": "ZCode",
     "tray.menu.openZCode": "Open ZCode",
+    "tray.menu.wzxPairing": "wzxClaw phone pairing",
+    "tray.menu.wzxPet": "wzxClaw desktop pet",
     "tray.menu.quit": "Quit",
   },
 };

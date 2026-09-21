@@ -62,6 +62,28 @@ export function createWindowsDesktopTray(options: {
           label: getLabel(desktopMenuMessageIds.trayOpenZCode),
           click: showTrayWindow,
         },
+        {
+          // wzxClaw 伴侣：配对窗不要求先唤主窗，直接走命令（showCurrentWindow
+          // 会把主窗顶到前台，对扫码与宠物开关都是噪音）
+          label: getLabel(desktopMenuMessageIds.trayWzxPairing),
+          click: () => {
+            void Promise.resolve(options.executeDesktopCommand(DesktopCommandIds.ShowWzxCompanionPairing)).catch(
+              (error) => {
+                options.logger.warn("[desktop-tray] failed to show wzx companion pairing", error);
+              },
+            );
+          },
+        },
+        {
+          label: getLabel(desktopMenuMessageIds.trayWzxPet),
+          click: () => {
+            void Promise.resolve(options.executeDesktopCommand(DesktopCommandIds.ToggleWzxCompanionPet)).catch(
+              (error) => {
+                options.logger.warn("[desktop-tray] failed to toggle wzx companion pet", error);
+              },
+            );
+          },
+        },
         { type: "separator" },
         {
           label: getLabel(desktopMenuMessageIds.fileNewTask),

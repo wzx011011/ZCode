@@ -489,6 +489,9 @@ export default {
   files: [
     "out/**/*",
     "package.json",
+    // wzxClaw 伴侣核心（纯 JS，主进程 createRequire 运行时加载；
+    // 相对 require 依赖真实目录结构，必须整体进包，见 companion-core/README.md）
+    "companion-core/**/*",
     // app.asar 会把桌面端运行时 node_modules 一并打进去，依赖包自带的 .map / README
     // 默认也会原样进入安装包。这里统一在主包层做一次裁剪，只移除非运行时文件，LICENSE 继续保留。
     ...PACKAGING_PRUNE_PATTERNS,

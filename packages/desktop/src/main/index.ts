@@ -64,6 +64,7 @@ import {
 } from "@zcode/services/node";
 import {
   desktopMenuMessageIds,
+  DesktopCommandIds,
   type Locale,
   type AppSettings,
   PlatformChannels,
@@ -121,6 +122,11 @@ import {
   resolveExplicitStartupWorkspaceBootstrap,
 } from "./startupWorkspaceDeepLinkGate.js";
 import { executeDesktopCommand } from "./desktopCommandHandlers.js";
+import {
+  initDesktopWzxCompanion,
+  type WzxCompanionController,
+} from "./desktopWzxCompanion.js";
+import { ownsWzxCompanionWindow } from "./desktopWzxCompanionWindows.js";
 import { clampDesktopZoomLevel, resolveDesktopZoomLevelFromFactor } from "./desktopZoom.js";
 import {
   getDesktopMenuLabel as getDesktopMenuLabelByLocale,
@@ -1346,10 +1352,23 @@ function confirmAppQuit(originWindow?: BrowserWindow | null) {
   return result === 0;
 }
 
+// wzxClaw 伴侣集成（手机配对 / 桌面宠物）控制器；whenReady 内初始化
+let wzxCompanionController: WzxCompanionController | null = null;
+
 async function executeDesktopCommandForApp(
   command: Parameters<typeof executeDesktopCommand>[0]["command"],
   senderWindow?: BrowserWindow | null,
 ) {
+  // wzxClaw 伴侣命令：不走通用分发（通用命令以「当前主窗」为中心），
+  // 直接驱动主进程内的伴侣控制器
+  if (command === DesktopCommandIds.ShowWzxCompanionPairing) {
+    wzxCompanionController?.showPairingWindow();
+    return;
+  }
+  if (command === DesktopCommandIds.ToggleWzxCompanionPet) {
+    wzxCompanionController?.togglePetWindow();
+    return;
+  }
   return executeDesktopCommand({
     fetchHelpConfig: readHelpConfig,
     command,
@@ -1451,7 +1470,12 @@ function resolveFocusedDesktopZoomLevel(): number {
 
 function getApplicationWindowsExcludingCuaIndicator(): BrowserWindow[] {
   return BrowserWindow.getAllWindows().filter(
-    (win) => !win.isDestroyed() && !windowsCuaOperationIndicator.ownsWindow(win),
+    (win) =>
+      !win.isDestroyed() &&
+      !windowsCuaOperationIndicator.ownsWindow(win) &&
+      // wzxClaw 伴侣 overlay（宠物/配对窗）同理：常驻可见，绝不能被
+      // 「找第一个应用窗口」的逻辑当成主窗口
+      !ownsWzxCompanionWindow(win),
   );
 }
 
@@ -2054,6 +2078,15 @@ app.whenReady().then(async () => {
       app.quit();
     },
     logger,
+  });
+
+  // wzxClaw 伴侣集成：注册 relay、配对二维码、桌面宠物窗；失败自证（快照
+  // 携带 companionError），绝不拖垮主进程启动
+  wzxCompanionController = initDesktopWzxCompanion({
+    logger,
+    getLocale: () => currentApplicationLocale,
+    showMainWindow: () =>
+      primaryWindowCoordinator.ensurePrimaryWindow("wzx-companion-open-main"),
   });
 
   registerPlatformIpcHandlers({

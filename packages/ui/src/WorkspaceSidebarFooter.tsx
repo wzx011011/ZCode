@@ -34,6 +34,7 @@ import {
   Maximize,
   Palette,
   Settings,
+  Smartphone,
   User,
   ZoomIn,
   ZoomOut,
@@ -174,6 +175,9 @@ export const WorkspaceSidebarFooter = memo(function WorkspaceSidebarFooterCompon
     settingsButtonMode === "back"
       ? intl.formatMessage({ id: "workspace.backToWorkspace" })
       : intl.formatMessage({ id: "settings.title" });
+  // wzxClaw 伴侣：手机配对入口（主进程弹配对二维码窗；web 端无此命令，
+  // 仅桌面渲染该按钮，与缩放子菜单同一 isDesktop 门控模式）
+  const companionButtonLabel = intl.formatMessage({ id: "sidebar.companion" });
   const usageButtonClick = onUsageClick ?? onSettingsButtonClick;
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [desktopZoomLevel, setDesktopZoomLevel] = useState(0);
@@ -376,6 +380,19 @@ export const WorkspaceSidebarFooter = memo(function WorkspaceSidebarFooterCompon
               workspaceIdentity={workspaceIdentity}
               compact
             />
+          ) : null}
+          {isDesktop ? (
+            <ControlHintTooltip title={companionButtonLabel}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-lg"
+                aria-label={companionButtonLabel}
+                onClick={() => void platform.executeDesktopCommand(DesktopCommandIds.ShowWzxCompanionPairing)}
+              >
+                <Smartphone className="size-4" />
+              </Button>
+            </ControlHintTooltip>
           ) : null}
           <ControlHintTooltip title={settingsButtonLabel}>
             <Button

@@ -499,6 +499,10 @@ export const DesktopCommandIds = {
   ClearAllData: "clearAllData",
   ClearCodingPlanWebviewStorage: "clearCodingPlanWebviewStorage",
   GetCuaOsSupport: "getCuaOsSupport",
+  // wzxClaw 伴侣集成：手机配对二维码窗 / 桌面宠物窗开关（主进程
+  // executeDesktopCommandForApp 拦截处理，不经通用命令分发）
+  ShowWzxCompanionPairing: "showWzxCompanionPairing",
+  ToggleWzxCompanionPet: "toggleWzxCompanionPet",
 } as const;
 
 export type DesktopCommandId = (typeof DesktopCommandIds)[keyof typeof DesktopCommandIds];
