@@ -510,7 +510,37 @@ function createCompanion(options = {}) {
   let nextReverseWireId = 0;
   // wireId → { timer, nativeId, gen }：反向请求超时看护 + 应答还原映射
   // （按 method 分档，见 handleAppServerFrame）
+  // wireId → { timer, nativeId, gen, requestId }：反向请求超时看护 + 应答
+  // 还原映射。requestId = 官方交互业务身份——同一交互的重宣告共享它，
+  // 应答/超时后兄弟 wireId 一并清理，防止幽灵 -32022 打到引擎已 settle
+  // 的请求上（pendingRequestGroups：requestId → wireId 集合）。
   const pending = new Map();
+  const pendingRequestGroups = new Map();
+
+  function dropRequestEntry(wireId) {
+    const entry = pending.get(wireId);
+    if (!entry) return;
+    pending.delete(wireId);
+    clearTimeout(entry.timer);
+    if (entry.requestId) {
+      const group = pendingRequestGroups.get(entry.requestId);
+      if (group) {
+        group.delete(wireId);
+        if (!group.size) pendingRequestGroups.delete(entry.requestId);
+      }
+    }
+  }
+
+  // 清除同一业务交互的兄弟 wireId（已应答/已超时后，其余宣告不再看护）
+  function dropSiblingWireIds(requestId, keepWireId) {
+    if (!requestId) return;
+    const group = pendingRequestGroups.get(requestId);
+    if (!group) return;
+    for (const wireId of [...group]) {
+      if (wireId === keepWireId) continue;
+      dropRequestEntry(wireId);
+    }
+  }
 
   // 分组显示名：个人配置里各 provider 的 providerName（Claude CLI/BigModel/
   // Codex/DeepSeek），目录透传给手机端做层级分组；缺失时手机端回退 providerId。
@@ -749,6 +779,7 @@ function createCompanion(options = {}) {
       bridgeGeneration++;
       for (const entry of pending.values()) clearTimeout(entry.timer);
       pending.clear();
+      pendingRequestGroups.clear();
       // 本地扩展请求同样作废（等价语义：旧进程的应答不会再有）
       for (const entry of localPending.values()) { clearTimeout(entry.timer); entry.resolve(null); }
       localPending.clear();
@@ -823,19 +854,28 @@ function createCompanion(options = {}) {
       }
       const nativeId = frame.id;
       const wireId = `srv-${++nextReverseWireId}@g${bridgeGeneration}`;
+      // 官方交互业务身份：同 requestId 的重宣告归入同组（应答/超时后兄弟清理）
+      const requestId = isObject(frame.params) && typeof frame.params.requestId === 'string'
+        ? frame.params.requestId : null;
       const timeoutMs = isFastMethod(frame.method) ? requestTimeoutMs : permissionRequestTimeoutMs;
       const timer = setTimeout(() => {
-        const entry = pending.get(wireId);
-        if (entry && pending.delete(wireId) && bridge) {
+        const timedOut = pending.get(wireId);
+        if (timedOut && pending.delete(wireId) && bridge) {
           emitActivity('clear', '');
-          bridge.write({ id: entry.nativeId, error: { code: ERR_TIMEOUT, message: 'Client request timed out' } });
+          dropSiblingWireIds(timedOut.requestId, wireId);
+          bridge.write({ id: timedOut.nativeId, error: { code: ERR_TIMEOUT, message: 'Client request timed out' } });
         }
       }, timeoutMs).unref();
       // 未决反向请求保存完整载荷与送达状态（审查 P2-6）：手机离席时
       // sendToPhone 被门禁丢弃，但条目留在 pending——手机回席统一补投，
       // 不再让「离席期间产生的权限」无声丢失到 120s 看护超时。
-      const entry = { timer, nativeId, gen: bridgeGeneration, delivered: false, frame: { ...frame, id: wireId } };
+      const entry = { timer, nativeId, gen: bridgeGeneration, delivered: false, requestId, frame: { ...frame, id: wireId } };
       pending.set(wireId, entry);
+      if (requestId) {
+        const group = pendingRequestGroups.get(requestId) ?? new Set();
+        group.add(wireId);
+        pendingRequestGroups.set(requestId, group);
+      }
       deliverReverse(entry);
       return;
     }
@@ -895,8 +935,10 @@ function createCompanion(options = {}) {
         return;
       }
       clearTimeout(entry.timer); pending.delete(frame.id);
-      // 已处理（批准/拒绝/回答都算）：宿主活动清除，气泡回落到连接状态
+      // 已处理（批准/拒绝/回答都算）：宿主活动清除，气泡回落到连接状态；
+      // 同一交互的兄弟 wireId（重宣告）一并撤看护，防幽灵 -32022
       emitActivity('clear', '');
+      dropSiblingWireIds(entry.requestId, frame.id);
       // 还原引擎原生 id 再转发（对外 wireId 只存在于手机↔companion 段）
       frame = { ...frame, id: entry.nativeId };
     }
