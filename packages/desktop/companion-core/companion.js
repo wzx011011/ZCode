@@ -22,7 +22,7 @@ const { ERR_UNHANDLED, ERR_FRAME_TOO_LARGE, ERR_TIMEOUT, ERR_X_BAD_PARAMS,
   isFastMethod } = require('./lib/protocol');
 const { resolveCompanionStatePaths } = require('./lib/state-path');
 const { resolveZcodeRuntime: resolveRuntime, publicRuntimeDescriptor } = require('./lib/runtime-resolver');
-const { ACCOUNT_PROVIDER_ID, ACCOUNT_PROVIDER_NAME, ACCOUNT_DISPLAY_MODEL_IDS,
+const { PLAN_PROVIDER_ID, PLAN_DISPLAY_MODEL_IDS, PLAN_DISPLAY_PROVIDER_NAME,
   buildPlanOverlay, defaultPersonalConfigPath, writePlanOverlay } = require('./lib/plan-overlay');
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -695,20 +695,19 @@ function createCompanion(options = {}) {
       try {
         const freshToken = readModelAuth(v2ConfigPath || path.join(os.homedir(), '.zcode/v2/config.json'));
         let planEnv = null;
-        // 模型目录 overlay（2026-09-21 改版）：注入桌面同款「BigModel 个人」
-        // 账号 provider（组名/模型/顺序逐项一致，见 lib/plan-overlay.js 头注）。
-        // 构建只依赖本地 base 配置 + 登录态 token，无网络拉取——旧「先拉 API
-        // 再 spawn」的冷启动竞态（手机先到 → 引擎裸跑 → 目录缺套餐模型）
-        // 从根上消除。base 缺失/损坏只丢套餐组，不阻塞起桥。
+        // 模型目录 overlay（2026-09-21 改版）：注入与桌面「BigModel 个人」组
+        // 同名同款的三模型（见 lib/plan-overlay.js 头注）。构建只依赖本地
+        // base 配置 + 登录态 token，无网络拉取——旧「先拉 API 再 spawn」的
+        // 冷启动竞态（手机先到 → 引擎裸跑 → 目录缺套餐模型）从根上消除。
+        // base 缺失/损坏只丢套餐组，不阻塞起桥。
         try {
           const baseRaw = fs.readFileSync(defaultPersonalConfigPath(), 'utf8');
           planEnv = { ZCODE_PERSONAL_PROVIDER_CONFIG_FILE: writePlanOverlay({
             overlay: buildPlanOverlay({
               baseRaw,
-              modelIds: [...ACCOUNT_DISPLAY_MODEL_IDS],
+              modelIds: [...PLAN_DISPLAY_MODEL_IDS],
               token: freshToken,
-              providerId: ACCOUNT_PROVIDER_ID,
-              providerName: ACCOUNT_PROVIDER_NAME,
+              providerName: PLAN_DISPLAY_PROVIDER_NAME,
             }),
             stateDir: statePaths.stateDir,
           }) };
@@ -1428,9 +1427,9 @@ function createCompanion(options = {}) {
               available: true,
               source: 'engine',
               // BigModel 个人组：置顶标记 + 组名兜底（引擎 providerLabel 缺失时）
-              ...(m.providerId === ACCOUNT_PROVIDER_ID ? {
+              ...(m.providerId === PLAN_PROVIDER_ID ? {
                 planGroup: true,
-                ...(m.providerLabel ? {} : { providerLabel: ACCOUNT_PROVIDER_NAME }),
+                ...(m.providerLabel ? {} : { providerLabel: PLAN_DISPLAY_PROVIDER_NAME }),
               } : {}),
             })),
             ...imported
