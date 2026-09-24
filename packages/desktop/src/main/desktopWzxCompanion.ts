@@ -49,7 +49,6 @@ interface WzxCompanionCoreModule {
     stateDir?: string;
     snapshotPath?: string;
     registrationSecret?: string;
-    planModelFetch?: ((params: { token: string }) => Promise<string[]>) | null;
     logger?: (event: string, detail?: string) => void;
     onPairing?: (url: string) => void;
     onStateChange?: () => void;
@@ -57,7 +56,6 @@ interface WzxCompanionCoreModule {
     runtimeManaged?: boolean;
   }): WzxCompanionInstance;
   resolveRegistrationSecret(): string | null;
-  fetchPlanModelIds(params: { token: string }): Promise<string[]>;
 }
 
 interface WzxCompanionConfig {
@@ -212,7 +210,6 @@ export function initDesktopWzxCompanion(deps: {
         relayUrl: config.relayUrl,
         cwd: config.cwd,
         zcodeCommand: resolveEngineCommand(),
-        planModelFetch: core.fetchPlanModelIds,
         registrationSecret,
         logger: logCoreEvent,
         onPairing: (url) => {
